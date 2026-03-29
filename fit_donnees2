@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jul 26 17:33:34 2018
+
+@author: leonard
+"""
+
+import os
+import numpy as np
+import scipy as sp
+from scipy import signal
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import scipy.interpolate as interpo
+from scipy.optimize import curve_fit
+
+
+repertoire='/home/leonard/Bureau/python/CP_angles/'
+os.chdir(repertoire)
+
+import BandDiag2 as BD
+
+c = 299792458
+periode = 424
+
+
+#####           Diagramme de Bande                  #####
+#####      Figure GX +30 ° température 20°C         #####
+#########################################################
+
+nom_ref = 'Spectre_Si_45°_ref1.npz'
+
+axelabelsize=18
+ticklabelsize=15
+sizefig=(6/1.2,6/1.2)
+
+nom_diag = 'Petru_central_première_periode_GX_-45°.npz'
+
+donnees_diag=[]
+FREQ,sig_filtre,Angles,sig=BD.filtre(repertoire+nom_diag,periode=periode)#repertoire+nom_ref,
+
+#figure données brutes
+plt.figure(figsize=sizefig);plt.pcolormesh(Angles,FREQ,sig.T,vmin=0.1,vmax=4000);
+plt.viridis()
+plt.xlim(20,80);plt.xlabel('Angles (degrees)',fontsize=axelabelsize);
+plt.ylim(0.4,0.8);plt.ylabel('Normalized Frequency $\omega$/a',fontsize=axelabelsize);
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.text(3,0.65,'(b)',fontsize=13)
+plt.tight_layout()
+
+#figure données filtrées
+plt.figure(figsize=sizefig);plt.pcolormesh(Angles,FREQ,sig_filtre.T,vmin=0.1,vmax=0.6);
+plt.xlim(20,80);plt.xlabel('Angles (degrees)',fontsize=axelabelsize);
+plt.ylim(0.4,0.65);plt.ylabel('Normalized Frequency $\omega$/a',fontsize=axelabelsize);
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.text(3,0.65,'(c)',fontsize=13)
+plt.tight_layout()
+
+function=[[BD.Fano(0.50,0.001,10,-10),BD.Polynom(2,[10,-10,10])]]#,[BD.Fano(0.51,0.001,10,10),BD.Polynom(2,[10,-10,10])]]
+points=[np.arange(160,220),np.arange(220,310)]
+bornes=[np.arange(600,800),np.arange(1500,1800)]
+
+donnees=[[] for _ in function]
+for n,func in enumerate(function):
+    data=BD.plot_fit(FREQ,func,sig_filtre,points[n],bornes[n],plot=False)
+    donnees[n].append(Angles[data[0]])
+    donnees[n].append(data[1].T[0])
+    donnees[n].append(BD.kpara(donnees[n][0],donnees[n][1])*2*np.pi/periode)
+    p=np.poly1d(np.polyfit(donnees[n][2],2*np.pi*c/(periode/donnees[n][1]),3))
+    p2=np.polyder(p)
+    donnees[n].append(p2(BD.kpara(donnees[n][0],donnees[n][1])*2*np.pi/periode))
+## Tracé de la figure ##
+fig=plt.figure(figsize=sizefig)
+ax1=fig.add_subplot(111)
+plt.jet()
+for n,nom in enumerate(function):
+    p=np.poly1d(np.polyfit(donnees[n][2],2*np.pi*c/(periode/donnees[n][1]),3))
+    p2=np.polyder(p)
+    plt.scatter(donnees[n][0],donnees[n][1],c=-np.log10(np.abs((donnees[n][3]/c))),vmin=0,vmax=1.5,label='experimental data')  
+    plt.plot(donnees[n][0],p(donnees[n][2])/(c*2*np.pi/periode),'grey',label='Polynomial fit')
+    if n==0:
+        handles,labels = ax1.get_legend_handles_labels()
+        handles,labels = [handles[1], handles[0]],[labels[1], labels[0]]
+        plt.legend(handles,labels)
+plt.xlim(20,70);plt.xlabel('Angles (degrees)',fontsize=axelabelsize)
+plt.ylim(0.485,0.515);plt.ylabel('Normalized Frequency $\omega$/a',fontsize=axelabelsize)
+
+y1, y2=ax1.get_ylim()
+cbar = plt.colorbar(ticks=[0,0.5,1,1.5])#,2,2.5,3])
+cbar.ax.set_yticklabels(['> 1','0.3','0.1','0.03'])#,'0.01','0.003', '< 0.001'])
+cbar.set_label('Group velocity ( $v_g/c$ log scale) ', rotation=270,fontsize=axelabelsize)
+cbar.ax.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tight_layout()
+
+plt.plot([20,80],[periode/760.5,periode/760.5])
+
+# spectre non filtré
+fig,ax1=plt.subplots(figsize=sizefig);plt.plot(FREQ,sig[50]);
+ax2=ax1.twiny()
+ax1.set_xlim(0.4,0.65);ax1.set_xlabel('Normalized Frequency $\omega$/a',fontsize=axelabelsize);
+ax2.set_xlim(periode/0.4,periode/0.65);ax2.set_xlabel('Wavelength (nm)',fontsize=axelabelsize);
+ax1.set_ylim(0,2);ax1.set_ylabel('Intensity (arb. units)',fontsize=axelabelsize);
+ax1.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+ax2.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+ax1.text(0.35,2.2,'(a)',fontsize=13)
+plt.tight_layout()
+
+
+#####                   Figure                      #####
+#####   modes lents en fonction de l'angle à 20°C   #####
+#########################################################
+periode=384
+axelabelsize=18
+ticklabelsize=15
+sizefig=(6*1.2,8/1.2)
+
+NOM=['Petru_troisieme_premiere_temp20_GX+201.npz',\
+     'Petru_troisieme_premiere_temp20_GX+221.npz',\
+     'Petru_troisieme_premiere_temp20_GX+241.npz',\
+     'Petru_troisieme_premiere_temp20_GX+262.npz',\
+     'Petru_troisieme_premiere_temp20_GX+283.npz',\
+     'Petru_troisieme_premiere_temp20_GX+30°_1.npz']
+
+Back=BD.Polynom(2,[100,-10,10])
+function=[[BD.Fano(0.49,0.001,10,10),Back.reinit()],[BD.Fano(0.478,0.001,1,10),Back.reinit()],\
+      [BD.Fano(0.487,0.001,-10,10),Back.reinit()],[BD.Fano(0.472,0.001,-1,10),Back.reinit()],\
+      [BD.Fano(0.471,0.001,-10,10),Back.reinit()],[BD.Fano(0.468,0.001,-10,10),Back.reinit()],\
+      [BD.Fano(0.467,0.0001,-10,10),Back.reinit()],[BD.Fano(0.463,0.001,-1,10),Back.reinit()],\
+      [BD.Fano(0.464,0.001,-10,10),Back.reinit()],[BD.Fano(0.458,0.001,-0.1,-10),Back.reinit()],\
+      [BD.Fano(0.46,0.001,-10,10),Back.reinit()],[BD.Fano(0.454,0.001,-1,10),Back.reinit()],\
+      ]
+
+points=[np.arange(30,125),np.arange(220,300),\
+        np.arange(30,125),np.arange(220,300),\
+        np.arange(175,220),np.arange(400,350,-1),\
+        np.arange(180,260),np.arange(330,450),\
+        np.arange(180,260),np.arange(320,360),\
+        np.arange(140,248),np.arange(300,400),\
+        ]
+
+bornes=[np.arange(1790,1920),np.arange(1830,1920),\
+        np.arange(1800,1940),np.arange(1800,1940),\
+        np.arange(1920,2030),np.arange(1910,2040),\
+        np.arange(1940,2050),np.arange(1940,2050),\
+        np.arange(1960,2090),np.arange(2030,2125),\
+        np.arange(1970,2100),np.arange(2040,2220),\
+        ]
+
+## Angles remis tels que mesurés (voir nom des fichiers)
+text=[[25,0.482,'20°'],[50,0.479,'20°'],\
+      [25,0.475,'22°'],[50,0.474,'22°'],\
+      [35,0.472,'24°'],[62,0.4695,'24°'],\
+      [35,0.468,'26°'],[65,0.464,'26°'],\
+      [34,0.465,'28°'],[57,0.458,'28°'],\
+      [31.5,0.4635,'30°'],[60.5,0.454,'30°']]
+## Traitement des données ##
+donnees=[[] for _ in function]
+for n,nom in enumerate(NOM[0:],):
+    for i in range(2):
+        data=BD.fit_filtre(nom,function[2*n+i],points[2*n+i],bornes[2*n+i],plot=False)
+        donnees[2*n+i].append(data[0][0])
+        donnees[2*n+i].append(data[0][1].T[0])
+        donnees[2*n+i].append(BD.kpara(data[0][0],data[0][1].T[0])*2*np.pi/periode)
+        p=np.poly1d(np.polyfit(donnees[2*n+i][2],2*np.pi*c/(periode/donnees[2*n+i][1]),4))
+        p2=np.polyder(p)
+        donnees[2*n+i].append(p2(BD.kpara(data[0][0],data[0][1].T[0])*2*np.pi/periode))
+## Tracé de la figure ##
+fig=plt.figure(figsize=sizefig)
+ax1=fig.add_subplot(111)
+plt.jet()
+for n,nom in enumerate(NOM[0:],):
+    for i in range(2):
+        p=np.poly1d(np.polyfit(donnees[2*n+i][2],2*np.pi*c/(periode/donnees[2*n+i][1]),4))
+        p2=np.polyder(p)
+        plt.scatter(donnees[2*n+i][0],donnees[2*n+i][1],c=-np.log10(np.abs((donnees[2*n+i][3]/c))),vmin=0,vmax=2,label='experimental data')  
+        plt.plot(donnees[2*n+i][0],p(donnees[2*n+i][2])/(c*2*np.pi/periode),'grey',label='Polynomial fit')
+        if (n,i)==(0,0):
+            handles,labels = ax1.get_legend_handles_labels()
+            handles,labels = [handles[1], handles[0]],[labels[1], labels[0]]
+            plt.legend(handles,labels)
+plt.xlim(20,70);plt.xlabel('Angles (degrees)',fontsize=axelabelsize)
+plt.ylim(0.45,0.485);plt.ylabel('Normalized Frequency $\omega$/a',fontsize=axelabelsize)
+
+y1, y2=ax1.get_ylim()
+for i in text:
+    plt.text(i[0],i[1],i[2])
+cbar = plt.colorbar(ticks=[0,0.5,1,1.5,2])
+cbar.ax.set_yticklabels(['> 1','0.3','0.1','0.03','< 0.01'])
+cbar.set_label('Group velocity ( $v_g/c$ log scale) ', rotation=270,fontsize=axelabelsize)
+cbar.ax.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tight_layout()
+
+plt.plot([20,80],[periode/760.5,periode/760.5])
+
+
+#####                   Figure                      #####
+#####   modes lents en fonction de T à GX+30°       #####
+#########################################################
+
+
+NOMtemp=['Petru_troisieme_premiere_temp20_GX+30°_1.npz',\
+         'Petru_troisieme_premiere_temp35_GX+30°3.npz',\
+         'Petru_troisieme_premiere_temp50_GX+30°1.npz',\
+         'Petru_troisieme_premiere_temp65_GX+30°2.npz',\
+         'Petru_troisieme_premiere_temp80_GX+30°1.npz']
+
+NOMtemp22=['Petru_troisieme_premiere_temp625_GX+22_4250_4.npz',\
+         'Petru_troisieme_premiere_temp65_GX+22_4250_3.npz',\
+         'Petru_troisieme_premiere_temp675_GX+22_4250_2.npz',\
+         ]
+#Fichiers de tests de la reproductibilité de la manip
+    #'Petru_troisieme_premiere_temp65_testrepro1.npz',\
+    #'Petru_troisieme_premiere_temp65_testrepro2.npz'
+
+function22=[[BD.Fano(0.4765,0.001,100,10),Back.reinit()],\
+        [BD.Fano(0.4765,0.001,100,10),Back.reinit()],\
+        [BD.Fano(0.4762,0.001,100,10),Back.reinit()],\
+        ]
+
+points22=[
+          np.arange(17,53),\
+          np.arange(17,53),\
+          np.arange(17,53),\
+          ]
+
+bornes22=[np.arange(1830,1930),\
+          np.arange(1830,1930),\
+          np.arange(1830,1930),\
+          ]
+
+donnees22=[[] for _ in function22]
+for n,nom in enumerate(NOMtemp22):
+    data=BD.fit_filtre(nom,function22[n],points22[n],bornes22[n],plot=False,delta=0.005)
+    donnees22[n].append(data[0][0])
+    donnees22[n].append(data[0][1].T[0])
+    donnees22[n].append(BD.kpara(data[0][0],data[0][1].T[0])*2*np.pi/periode)
+    p=np.poly1d(np.polyfit(donnees22[n][2],2*np.pi*c/(periode/donnees22[n][1]),4))
+    p2=np.polyder(p)
+    donnees22[n].append(p2(BD.kpara(data[0][0],data[0][1].T[0])*2*np.pi/periode))
+
+plt.figure(figsize=sizefig)
+for n,nom in enumerate(NOMtemp22):
+    p=np.poly1d(np.polyfit(donnees22[n][2],2*np.pi*c/(periode/donnees22[n][1]),4))
+    p2=np.polyder(p)
+    plt.plot(donnees22[n][0],p(donnees22[n][2])/(c*2*np.pi/periode),'grey')
+    plt.scatter(donnees22[n][0],donnees22[n][1],c=-np.log10(np.abs((donnees22[n][3]/c))),vmin=1,vmax=3)     
+plt.xlabel(r'Angle $\theta$ (Degres)',fontsize=axelabelsize);plt.ylabel('Normalized Frequency $\omega$/a',fontsize=axelabelsize)
+cbar = plt.colorbar(ticks=[1,1.5,2,2.5,3])
+cbar.ax.set_yticklabels(['> 0.1','0.03','0.01','0.003','< 0.001'])
+cbar.set_label('Group velocity ( $v_g/c$ log scale) ', rotation=270,fontsize=axelabelsize)
+cbar.ax.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tight_layout()
+
+Back=BD.Polynom(2,[10,10,-10])
+donneestemp=[]
+bornes=[np.arange(330,480)]
+
+for n,nom in enumerate(NOMtemp):
+    data=BD.filtre(nom)
+    FREQ=data[0]; sig_filtre=data[1];Angles=data[2]
+    donneestemp.append(sig_filtre.T)
+   
+    
+A2=BD.plot_fit(Angles,[BD.Fano(40,0.1,-0.1,10),Back.reinit()],[donneestemp[i][2050]*1000 for i in range(5)],\
+                           np.arange(0,5),np.arange(140,240),shift=False)
+A3=BD.plot_fit(Angles,[BD.Fano(57.5,0.1,-0.1,10),Back.reinit()],[donneestemp[i][2138]*1000 for i in range(5)],\
+                           np.arange(0,5),np.arange(340,465),shift=False)
+
+donneestemp22=[] 
+for n,nom in enumerate(NOMtemp22):
+    data=BD.filtre(nom)
+    FREQ=data[0]; sig_filtre=data[1];Angles22=data[2]
+    donneestemp22.append(sig_filtre.T)
+
+A4=BD.plot_fit(Angles22,[BD.Lorentz(45,6,-10),Back.reinit()],[donneestemp22[i][1885]*1000 for i in range(len(NOMtemp22))],\
+                           np.arange(0,len(NOMtemp22)),np.arange(10,70),shift=False)
+
+plt.figure(figsize=sizefig)
+for n,nom in enumerate(NOMtemp):
+    plt.plot(Angles[140:240],donneestemp[n][2050][140:240]*1000)
+    plt.plot(Angles[340:465],donneestemp[n][2138][340:465]*1000)
+for i in range(5):
+    plt.plot(np.arange(Angles[140],Angles[239],(Angles[239]-Angles[140])/500),A2[3][i][0],'-')
+    plt.plot(np.arange(Angles[340],Angles[464],(Angles[464]-Angles[340])/500),A3[3][i][0],'-')
+for n,nom in enumerate(NOMtemp22):   
+    plt.plot(Angles22[10:-10],donneestemp22[n][1885][10:-10]*1000)
+for i in range(len(NOMtemp22)):
+    plt.plot(np.arange(Angles22[10],Angles22[69],(Angles22[69]-Angles22[10])/500),A4[3][i][0],'-')   
+plt.xlabel(r'Angle $\theta$ (Degres)',fontsize=axelabelsize);plt.ylabel('Intensity (arb. unit)',fontsize=axelabelsize)
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tight_layout()
+    
+DA2=A2[1].T[0]-A2[1].T[0][0]
+DA3=A3[1].T[0]-A3[1].T[0][0]
+DA4=A4[1].T[0]-A4[1].T[0][0]
+
+### Figure sensibilité en delta T ###
+fig=plt.figure(figsize=sizefig);ax=fig.add_subplot(111)
+
+plt.plot([20,35,50,65,80],DA2,'s',color='green',)
+plt.plot([20,35,50,65,80],DA3,'o',color='red',)
+plt.plot([62.5,65,67.5],DA4,'^',color='purple',)
+plt.xlabel('Temperature (°C)',fontsize=axelabelsize);plt.ylabel(r'Angle shift $\Delta \theta$',fontsize=axelabelsize)
+plt.ylim(-0.2,3);plt.xlim(18,82)
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tight_layout()
+
+Back=BD.Polynom(2,[10,-10,10])
+E2=BD.plot_fit(FREQ,[BD.Fano(0.46,0.1,-0.1,10),Back.reinit()],[donneestemp[i].T[190] for i in range(5)],np.arange(0,5),np.arange(2000,2100));
+E3=BD.plot_fit(FREQ,[BD.Fano(0.45,0.1,-0.1,10),Back.reinit()],[donneestemp[i].T[380] for i in range(5)],np.arange(0,5),np.arange(2100,2200));
+E4=[donnees22[i][1][25] for i in range(len(donnees22))]
+
+DE2=E2[1].T[0]-E2[1].T[0][0]
+DE3=E3[1].T[0]-E3[1].T[0][0]
+DE4=[i - E4[0] for i in E4]
+
+F2=(DE2)/(E2[1].T[0]*np.cos(A2[1].T[0]*np.pi/180)/1000)
+F3=(DE3)/(E2[1].T[0]*np.cos(A2[1].T[0]*np.pi/180)/1000)
+F4=np.asarray([(DE4[i])/(E4[i]*np.cos(A4[1].T[0][i]*np.pi/180)/1000) for i in range(len(donnees22))])
+
+######## Fit des points par des droites ##########
+P2=np.linalg.lstsq(F2[:,np.newaxis],DA2)[0]
+P2bis=np.poly1d(np.polyfit(F3,DA3,1))
+P3=np.linalg.lstsq(F3[:,np.newaxis],DA3)[0]
+P3bis=np.poly1d(np.polyfit(F3,DA3,1))
+P4=np.linalg.lstsq(F4[:,np.newaxis],DA4)[0]
+P4bis=np.poly1d(np.polyfit(F4,DA4,1))
+
+
+### Figure sensibilité proportionnelle ###
+fig3=plt.figure(figsize=sizefig);ax3=plt.subplot(111)
+plt.plot(F2,DA2,'s',color='green',);plt.plot(F3,DA3,'o',color='red',);plt.plot(F4,DA4,'^',color='purple',)
+a,b=ax3.get_xlim()
+p=np.poly1d(np.polyfit(donnees[-2][2][45:55],2*np.pi*c/(periode/donnees[-2][1][45:55]),4))
+p2=np.polyder(p)
+plt.plot([-.5,2],[-.5*P2,2*P2],'--',color='green')
+plt.plot([-.5,2],[-.5*P3,2*P3],'--',color='red')
+plt.plot([-.5,2],[-.5*P4,2*P4],'--',color='purple')
+#plt.plot([-.5,2],P2bis([-.5,2]),'-.',color='green')
+#plt.plot([-.5,2],P3bis([-.5,2]),'-.',color='red')
+#plt.plot([-.5,2],P4bis([-.5,2]),'-.',color='purple')
+
+
+
+plt.plot([a,b],[-(180/np.pi)*c*a/p2(donnees[-2][2][45:55])[5]/1000,-(180/np.pi)*c*b*1/p2(donnees[-2][2][45:55])[5]/1000],'-',color='green');
+plt.plot([a,b],[-(180/np.pi)*c*a*1/donnees[-1][3][-3]/1000,-(180/np.pi)*c*b*1/donnees[-1][3][-3]/1000],'-',color='red')
+plt.plot([a,b],[-(180/np.pi)*c*a*1/donnees22[2][3][-25]/1000,-(180/np.pi)*c*b*1/donnees22[2][3][-25]/1000],'-',color='purple')
+#plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+plt.text(1.6,-0.05,r'x10$^{-3}$',fontsize=axelabelsize)
+plt.xlim(-0.1,1.85);plt.xlabel('Relative frequency shift' r' $ \frac{\Delta \omega}{\omega \cos \theta}$',fontsize=axelabelsize)
+plt.ylim(-0.1,2.5);plt.ylabel('Angle shift ' r'$\Delta\theta$ (degrees)',fontsize=axelabelsize)
+plt.tick_params(axis='both', which='major', labelsize=ticklabelsize)
+plt.tight_layout()

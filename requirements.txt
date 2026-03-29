@@ -1,0 +1,13 @@
+# Core scientific and GUI stack
+numpy
+scipy
+matplotlib
+PyQt5
+pyqtgraph
+seabreeze
+
+# Optional hardware-specific modules used by the original setup:
+# aravis
+# thorpy
+# OSA_Thorlabs (local/custom wrapper)
+pyusb

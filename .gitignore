@@ -18,3 +18,4 @@ dist/
 *.mat
 *.log
 manip_angle_config.txt
+legacy/

@@ -18,23 +18,18 @@ Canonical module names:
 - `spectrum_fit_dialog.py`: current fitting dialog used by `spectrometer_gui.py`
 - `band_diagram_analysis.py`, `camera_filter_analysis.py`, `fit_donnees2`: analysis helpers
 
-Legacy modules kept only as historical references:
-- `spectrometer_gui_legacy_v1.py`
-- `spectrometer_gui_legacy_v2.py`
-- `spectrum_fit_dialog_legacy.py`
-
 Legacy compatibility wrappers kept in place:
 - `programme_angle_3.py` -> `experiment_master_gui.py`
 - `combined_experiment_gui.py` -> `experiment_master_gui.py`
 - `Spectro31.py` -> `spectrometer_gui.py`
-- `Spectro2.py` -> `spectrometer_gui_legacy_v2.py`
-- `Spectro1.py` -> `spectrometer_gui_legacy_v1.py`
 - `Spectro_fit2.py` -> `spectrum_fit_dialog.py`
-- `Spectro_fit.py` -> `spectrum_fit_dialog_legacy.py`
 - `Camera1.py` -> `camera_gui.py`
 - `Rotation1.py` -> `rotation_gui.py`
 - `BandDiag2.py` -> `band_diagram_analysis.py`
 - `filtre_camera.py` -> `camera_filter_analysis.py`
+
+Historical legacy files can still be kept locally in an ignored `legacy/` directory when needed,
+but they are no longer part of the tracked repository.
 
 ## Dependencies
 

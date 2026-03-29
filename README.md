@@ -18,18 +18,8 @@ Canonical module names:
 - `spectrum_fit_dialog.py`: current fitting dialog used by `spectrometer_gui.py`
 - `band_diagram_analysis.py`, `camera_filter_analysis.py`, `fit_donnees2`: analysis helpers
 
-Legacy compatibility wrappers kept in place:
-- `programme_angle_3.py` -> `experiment_master_gui.py`
-- `combined_experiment_gui.py` -> `experiment_master_gui.py`
-- `Spectro31.py` -> `spectrometer_gui.py`
-- `Spectro_fit2.py` -> `spectrum_fit_dialog.py`
-- `Camera1.py` -> `camera_gui.py`
-- `Rotation1.py` -> `rotation_gui.py`
-- `BandDiag2.py` -> `band_diagram_analysis.py`
-- `filtre_camera.py` -> `camera_filter_analysis.py`
-
-Historical legacy files can still be kept locally in an ignored `legacy/` directory when needed,
-but they are no longer part of the tracked repository.
+Historical entry points and wrappers are now kept only in the ignored local `legacy/`
+directory when needed; they are no longer part of the tracked repository.
 
 ## Dependencies
 
@@ -52,16 +42,14 @@ From this directory:
 - `python experiment_master_gui.py`
 - `python spectrometer_gui.py`
 
-Legacy names still work:
-- `python combined_experiment_gui.py`
-- `python programme_angle_3.py`
-- `python Spectro31.py`
+Historical wrapper filenames are no longer tracked. Run the canonical modules directly,
+or keep private local aliases under `legacy/` if you still want the old names on this machine.
 
 ## Repository policy
 
 - Measurement outputs (`*.npz`) are ignored by Git.
 - Local runtime config (`manip_angle_config.txt`) is ignored by Git.
-- This is a direct legacy import; no code modernization was applied yet.
+- The active modules were cleaned for usability, while preserving the underlying experiment logic.
 
 ## Notes
 

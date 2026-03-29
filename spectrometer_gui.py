@@ -5,9 +5,9 @@ Created on Wed Nov 14 12:17:44 2018
 
 @author: leonard
 
-Version 3 of the spectro software. It goes with the version 2 of Spectro_fit where spectra are defined as objects
-see Spectro_fit2 for more informations
-BandDiag2 is not requiered anymore (was not anyway)
+Version 3 of the spectro software. Spectra are represented as Python objects and can be
+post-processed through `spectrum_fit_dialog`. Optional band-diagram analysis lives in a
+separate helper module and is not required to run the spectrometer GUI.
 """
 ##################################################################
 ###       import pour l'interface et autres fonctions       ######
@@ -25,7 +25,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import numpy as np
 import re
-#import BandDiag2 as BD
 import camera_filter_analysis as FC
 import spectrum_fit_dialog as SF
 
